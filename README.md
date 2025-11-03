@@ -85,7 +85,7 @@ I operate a production-grade homelab as a personal R&D sandbox.
 <p align="center">
     <div align=center>
         <img height=180 src="https://github-readme-stats.vercel.app/api?username=JoaoGuedes01&show_icons=true&theme=dark&custom_title=GitHub%20Stats" alt="Guedes's GitHub Stats">
-        <img height=180 src="https://github-readme-stats.vercel.app/api/top-langs/?username=JoaoGuedes01&theme=dark&layout=compact" alt="Guedes's Most Used Languages">
+        <img height=180 src="https://github-readme-stats.vercel.app/api/top-langs/?username=JoaoGuedes01&theme=dark&layout=compact&hide=html,css,scss,Jupyter Notebook,ShaderLab,Perl,Handlebars,Prolog,HLSL,TypeScript&hide_progress=true" alt="Guedes's Most Used Languages">
     </div>
 </p>
 
