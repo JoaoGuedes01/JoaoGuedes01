@@ -67,6 +67,12 @@ AppSec, DevSecOps, SAST/DAST/SCA, Secure Coding, Pentesting (Burp, ZAP, Nmap, Me
 
 ---
 
+### Home Lab
+I operate a production-grade homelab as a personal R&D sandbox.   
+— [Architecture, threat model, components](home-lab.md)   
+— [Uptime](https://uptime.guedes.dpdns.org/status/services)
+
+
 ### Connect
 
 - [LinkedIn](https://www.linkedin.com/in/joaom-guedes/)
@@ -74,13 +80,12 @@ AppSec, DevSecOps, SAST/DAST/SCA, Secure Coding, Pentesting (Burp, ZAP, Nmap, Me
 
 ---
 
-### Metrics & Progress
+### Dynamic Components
 
-[![GitHub stats](https://github-readme-stats.vercel.app/api?username=JoaoGuedes01&show_icons=true&theme=dark)](https://github.com/anuraghazra/github-readme-stats)
-
-[![roadmap.sh](https://roadmap.sh/card/tall/68f175b117747caa5a381a4f?variant=dark)](https://roadmap.sh)
-
-<picture>
-  <img alt="github-snake" src="github-snake.svg" />
-</picture>
-
+<p align="center">
+    <img height=400 src="https://roadmap.sh/card/tall/68f175b117747caa5a381a4f?variant=dark" alt="Guedes's Most Used Languages">
+    <div align=center>
+        <img height=180 src="https://github-readme-stats.vercel.app/api?username=JoaoGuedes01&show_icons=true&theme=dark&custom_title=GitHub%20Stats" alt="Guedes's GitHub Stats">
+        <img height=180 src="https://github-readme-stats.vercel.app/api/top-langs/?username=JoaoGuedes01&theme=dark&layout=compact" alt="Guedes's Most Used Languages">
+    </div>
+</p>
