@@ -80,12 +80,16 @@ I operate a production-grade homelab as a personal R&D sandbox.
 
 ---
 
-### Dynamic Components
+### Dynamic Stats
 
 <p align="center">
-    <img height=400 src="https://roadmap.sh/card/tall/68f175b117747caa5a381a4f?variant=dark" alt="Guedes's Most Used Languages">
     <div align=center>
         <img height=180 src="https://github-readme-stats.vercel.app/api?username=JoaoGuedes01&show_icons=true&theme=dark&custom_title=GitHub%20Stats" alt="Guedes's GitHub Stats">
         <img height=180 src="https://github-readme-stats.vercel.app/api/top-langs/?username=JoaoGuedes01&theme=dark&layout=compact" alt="Guedes's Most Used Languages">
     </div>
+</p>
+
+### Roadmap
+<p align="center">
+    <img height=400 src="https://roadmap.sh/card/tall/68f175b117747caa5a381a4f?variant=dark" alt="Guedes's Most Used Languages">
 </p>
