@@ -2,7 +2,7 @@
 
 ### Backend systems engineer with a security mindset
 
-Security Engineer @ [Checkmarx](https://checkmarx.com/).  
+Application Security Engineer @ [Checkmarx](https://checkmarx.com/).  
 I design and build distributed backend systems, with an emphasis on resilience, observability and maintainability — and I apply offensive security thinking to improve software safety.
 
 Outside of work I operate a self-hosted home lab as a playground for systems design, service orchestration, and security experimentation.
