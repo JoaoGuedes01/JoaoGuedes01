@@ -1,9 +1,9 @@
 ## João Guedes
 
-### Backend systems engineer with a security mindset
+### Backend system engineer and security researcher
 
-Application Security Engineer @ [Checkmarx](https://checkmarx.com/).  
-I design and build distributed backend systems, with an emphasis on resilience, observability and maintainability — and I apply offensive security thinking to improve software safety.
+Backend Engineer @ [Uphold](https://uphold.com/).  
+I design and build distributed backend systems, with an emphasis on resilience, observability and maintainability. My security background and passion allows me to apply offensive security thinking and improve software safety.
 
 Outside of work I operate a self-hosted home lab as a playground for systems design, service orchestration, and security experimentation.
 
@@ -15,12 +15,16 @@ Outside of work I operate a self-hosted home lab as a playground for systems des
 - Application Security & secure SDLC
 - Vulnerability research, exploit analysis
 - Reverse engineering
+- System design
+- System orchestration
+- DevOps
 - Self-hosted infra / home-lab
 
 ---
 
 ### Currently building / exploring
 
+- New version of my website
 - AR mobile monster capturing game (Invizimals-inspired)
 - Go-based media player
 - Wii Sports memory analysis + code injection mod
