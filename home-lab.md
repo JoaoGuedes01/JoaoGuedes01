@@ -1,16 +1,19 @@
 # Home Lab
 
-> The short version of my homelab. The long version, with the reasoning, mistakes and screenshots, is a 5-part series on [joaoguedes.net](https://joaoguedes.net/blog).
+> A light overview of the current version of my lab. For the longer, more detailed story of how it was built, see the [Homelab series on joaoguedes.net](https://joaoguedes.net/blog/the-frankenlab).
 
-It has been serving my self-hosted apps since 2022. It started as a free machine built from leftovers (the **Frankenlab**) and was rebuilt in 2026 into a single, quiet Proxmox host that I treat like a small production environment: least privilege, one login for everything, backups I actually verify, and alerts that reach my phone.
+It has been serving my self-hosted apps since 2022. It started as a free machine built from leftovers and was rebuilt into a single, quiet and powerful Proxmox host that I treat like a small production environment with least privilege, one login for everything, backups I actually verify, and alerts that reach my phone.
 
-| Part | Read it |
-|---|---|
-| 1. The Frankenlab: a cost-free lab from hand-me-down parts | [joaoguedes.net/blog/the-frankenlab](https://joaoguedes.net/blog/the-frankenlab) |
-| 2. The Rebuild: hardware, ZFS, LXC instead of VMs | [joaoguedes.net/blog/the-rebuild](https://joaoguedes.net/blog/the-rebuild) |
-| 3. The Media Stack: Jellyfin, requests, the arr stack, music | [joaoguedes.net/blog/the-media-stack](https://joaoguedes.net/blog/the-media-stack) |
-| 4. The Infrastructure: DNS, certificates, SSO, vault, VPN | [joaoguedes.net/blog/the-infrastructure](https://joaoguedes.net/blog/the-infrastructure) |
-| 5. Keeping It Alive: backups, disk health, monitoring, updates | [joaoguedes.net/blog/keeping-it-alive](https://joaoguedes.net/blog/keeping-it-alive) |
+### Live status
+
+Real data from my [Uptime Kuma status page](https://uptime.joaoguedes.net):
+
+| Service | Status | 30-day uptime |
+|---|---|---|
+| Jellyfin | ![](https://uptime.joaoguedes.net/api/badge/9/status) | ![](https://uptime.joaoguedes.net/api/badge/9/uptime/30d) |
+| Navidrome | ![](https://uptime.joaoguedes.net/api/badge/10/status) | ![](https://uptime.joaoguedes.net/api/badge/10/uptime/30d) |
+| Seerr | ![](https://uptime.joaoguedes.net/api/badge/11/status) | ![](https://uptime.joaoguedes.net/api/badge/11/uptime/30d) |
+| Pi-hole DNS | ![](https://uptime.joaoguedes.net/api/badge/3/status) | ![](https://uptime.joaoguedes.net/api/badge/3/uptime/30d) |
 
 ---
 
@@ -18,13 +21,13 @@ It has been serving my self-hosted apps since 2022. It started as a free machine
 
 | | |
 |---|---|
-| **Hypervisor** | Proxmox VE, ten LXC containers |
-| **Compute** | Intel Core i7-8700K (6C/12T), 32 GB DDR4, Intel UHD 630 for transcoding. Reused from my old gaming rig |
-| **Storage** | 1 TB NVMe for Proxmox and container disks, 2 × 8 TB ZFS mirror (`tank`) for data |
+| **Hypervisor** | Proxmox VE running LXC containers and VMs |
+| **Compute** | Intel Core i7-8700K (6C/12T), 32 GB DDR4, Intel UHD 630 for transcoding. Reused from an old gaming rig |
+| **Storage** | 1 TB NVMe for Proxmox and container disks, 2 × 8 TB ZFS mirror for data |
 | **Network** | UniFi router, Pi-hole + Unbound for DNS, wildcard certificate behind a reverse proxy |
-| **Identity** | Authentik (SSO + MFA in one place), Vaultwarden for passwords |
-| **Remote access** | Tailscale subnet router and Teleport for me, Cloudflare Tunnel for the few things I share |
-| **Backups** | Proxmox Backup Server on a second machine (the old Frankenlab), plus ZFS mirror and scrubs |
+| **Identity** | Authentik SSO, Vaultwarden |
+| **Remote access** | Tailscale subnet router and Teleport for me, Cloudflare Tunnel for the few services that are meant to be public |
+| **Backups** | Proxmox Backup Server on a second machine + ZFS mirror and scrubs |
 | **Monitoring** | Uptime Kuma, a host health script and heartbeats, all reporting to Discord |
 
 ---
@@ -79,26 +82,26 @@ flowchart TB
 
 | Container | Role |
 |---|---|
-| DNS | Pi-hole with its own recursive resolver (Unbound), so ads are blocked and I don't depend on someone else's DNS |
-| Reverse proxy | Clean names and a real wildcard certificate for every service |
-| VPN | Tailscale subnet router that gets me back into the house |
+| DNS | Pi-hole with its own recursive resolver (Unbound), so ads are blocked and I can forward traffic through my reverse proxy |
+| Reverse proxy | Clean names and a wildcard certificate for every service |
+| VPN | Tailscale subnet router so I can have remote access in WAN |
 | File sharing | Samba, managed through Cockpit, so every device sees the media as a network drive |
 | Docker (management) | Authentik, Vaultwarden, Uptime Kuma and other admin apps |
-| Docker (media automation) | Seerr, Radarr, Sonarr, Bazarr and friends |
+| Docker (media automation) | Seerr, Radarr, Sonarr, Bazarr and the rest of the arr stack and support apps|
 | Docker (music) | Soulseek and music tooling |
-| Jellyfin / Navidrome | Video and music servers |
-| Tunnel | Cloudflare connector for the few services I share with family and friends |
+| Jellyfin / Navidrome | Multimedia streaming services |
+| Tunnel | Cloudflare connector for the few public services |
 
 ---
 
 ## Design decisions
 
-- **LXC over VMs.** Containers share the host kernel, start in seconds and cost almost no RAM. Ten of them use less than 15% of the machine. I harden what I can (unprivileged where possible) and accept the remaining privileged ones as a conscious trade-off.
+- **LXC over VMs.** Containers share the host kernel, start in seconds and cost almost no RAM. Ten of them use less than 15% of my machine. I harden what I can (unprivileged where possible) and accept the remaining privileged ones as a conscious trade-off.
 - **ZFS owns the disks.** A mirror survives a dead drive, checksums catch silent corruption, and a monthly scrub repairs it. All media lives in one dataset so downloads can be *hardlinked* into the library instead of copied.
-- **One identity.** Management apps sit behind Authentik, so MFA lives in one place and there is one off-switch.
-- **Don't expose what you don't need.** Nothing listens on my home connection. Sensitive tools are LAN/VPN only, and only what other people really need is published through the tunnel.
-- **Back up what is irreplaceable.** The whole lab is backed up at the Proxmox level, but I only back up *data* I can't get back (photos, home videos, configs). Media can be re-downloaded or re-ripped.
-- **Boring monitoring.** No heavy stack. Uptime Kuma checks the services, a script checks the host, and heartbeats check that the monitoring itself is still alive.
+- **One identity.** Management apps sit behind Authentik.
+- **Don't expose what you don't need.** Nothing listens on my home connection. Sensitive tools are LAN/VPN only, and only public facing services are published through the tunnel.
+- **Back up what is irreplaceable.** The whole lab is backed up at the Proxmox level, but I only back up *data* I can't get back (photos, home videos, configs). Media can be re-downloaded and/or re-ripped.
+- **Boring monitoring.** No heavy stack. Uptime Kuma checks the services, a script checks the host through a cron job and heartbeats check that the monitoring itself is still alive.
 
 ---
 
@@ -108,8 +111,8 @@ flowchart TB
 |---|---|
 | **Ingress** | Cloudflare Tunnel (outbound connection), no inbound port forwarding |
 | **Admin access** | Only from the LAN or over VPN (Tailscale / Teleport) |
-| **Identity** | SSO + MFA through Authentik, passwords in self-hosted Vaultwarden |
-| **Isolation** | One container per role, unprivileged where possible, same UID/GID only for services that share media |
+| **Identity** | SSO + MFA through Authentik |
+| **Isolation** | One container per role, unprivileged where possible, same service account UID/GID only for services that share media |
 | **Storage** | Bind-mount only the paths a service needs |
 | **Recovery** | PBS backups, ZFS mirror and scrubs, SMART tests, all verified on a schedule |
 
