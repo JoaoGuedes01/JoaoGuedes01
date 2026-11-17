@@ -1,122 +1,136 @@
-# Home Lab Architecture
+# Home Lab
 
-My homelab runs on **Proxmox** as the baremetal hypervisor.  
-Inside it I run a dedicated **Docker VM** that hosts 99% of all “apps” — containerized, minimal privileges, strict mount scopes.  
-Services running on the Docker VM mount their volumes from remote storage (NFS) provided by OMV.
+> The short version of my homelab. The long version, with the reasoning, mistakes and screenshots, is a 5-part series on [joaoguedes.net](https://joaoguedes.net/blog).
 
-I also have **2 external physical machines** to separate trust domains:
+It has been serving my self-hosted apps since 2022. It started as a free machine built from leftovers (the **Frankenlab**) and was rebuilt in 2026 into a single, quiet Proxmox host that I treat like a small production environment: least privilege, one login for everything, backups I actually verify, and alerts that reach my phone.
 
-- Alpine Linux box for VPN ingress + uptime monitoring
-- Raspberry Pi for DNS / recursive resolver stack
-
-This separation improves blast radius, routing control, and keeps “security plane” physically away from app workloads.
+| Part | Read it |
+|---|---|
+| 1. The Frankenlab: a cost-free lab from hand-me-down parts | [joaoguedes.net/blog/the-frankenlab](https://joaoguedes.net/blog/the-frankenlab) |
+| 2. The Rebuild: hardware, ZFS, LXC instead of VMs | [joaoguedes.net/blog/the-rebuild](https://joaoguedes.net/blog/the-rebuild) |
+| 3. The Media Stack: Jellyfin, requests, the arr stack, music | [joaoguedes.net/blog/the-media-stack](https://joaoguedes.net/blog/the-media-stack) |
+| 4. The Infrastructure: DNS, certificates, SSO, vault, VPN | [joaoguedes.net/blog/the-infrastructure](https://joaoguedes.net/blog/the-infrastructure) |
+| 5. Keeping It Alive: backups, disk health, monitoring, updates | [joaoguedes.net/blog/keeping-it-alive](https://joaoguedes.net/blog/keeping-it-alive) |
 
 ---
 
-## High-Level Topology
+## At a glance
+
+| | |
+|---|---|
+| **Hypervisor** | Proxmox VE, ten LXC containers |
+| **Compute** | Intel Core i7-8700K (6C/12T), 32 GB DDR4, Intel UHD 630 for transcoding. Reused from my old gaming rig |
+| **Storage** | 1 TB NVMe for Proxmox and container disks, 2 × 8 TB ZFS mirror (`tank`) for data |
+| **Network** | UniFi router, Pi-hole + Unbound for DNS, wildcard certificate behind a reverse proxy |
+| **Identity** | Authentik (SSO + MFA in one place), Vaultwarden for passwords |
+| **Remote access** | Tailscale subnet router and Teleport for me, Cloudflare Tunnel for the few things I share |
+| **Backups** | Proxmox Backup Server on a second machine (the old Frankenlab), plus ZFS mirror and scrubs |
+| **Monitoring** | Uptime Kuma, a host health script and heartbeats, all reporting to Discord |
+
+---
+
+## Architecture
 
 ```mermaid
 flowchart TB
+    internet["Internet"]
+    cf["Cloudflare Tunnel<br/>(outbound only, no forwarded ports)"]
+    me["Me, away from home"]
 
-    internet["Internet (Public)"]
-    router["Router / Firewall<br/>DNS -> Pi local IP"]
-    lan["Home LAN"]
+    subgraph home["Home network"]
+        router["UniFi router<br/>Teleport VPN"]
 
-    subgraph physical["3 Physical Machines"]
-        subgraph proxmox["Proxmox Host"]
-            dockerVM["Docker VM<br/>(all apps)"]
-            omvVM["OMV VM<br/>storage backend"]
+        subgraph pve["Proxmox host (i7-8700K / 32 GB)"]
+            direction TB
+            subgraph net["Network & access"]
+                dns["DNS<br/>Pi-hole + Unbound"]
+                proxy["Reverse proxy<br/>wildcard TLS"]
+                ts["Tailscale<br/>subnet router"]
+                tunnel["Tunnel connector"]
+            end
+            subgraph apps["Apps"]
+                mgmt["Docker: management<br/>Authentik, Vaultwarden, Uptime Kuma"]
+                media["Docker: media automation"]
+                music["Docker: music"]
+                jelly["Jellyfin"]
+                navi["Navidrome"]
+            end
+            samba["Samba + Cockpit<br/>file sharing"]
+            zfs[("ZFS mirror 'tank'<br/>2 x 8 TB")]
+            nvme[("NVMe<br/>container disks")]
         end
 
-        alpine["Alpine Linux Baremetal<br/>(mgmt plane)<br/>- Tailscale Auth<br/>- Uptime Kuma"]
-
-        pi["Raspberry Pi<br/>DNSSEC Recursive Resolver<br/>- dnsmasq<br/>- unbound"]
+        pbs["Second machine<br/>Proxmox Backup Server"]
     end
 
-    internet -->|"80 / 443"| router --> lan
-    lan --> physical
+    discord["Discord<br/>alerts"]
+
+    internet --> cf --> tunnel --> proxy
+    me --> ts --> router
+    router --> dns
+    proxy --> mgmt & media & music & jelly & navi
+    media & music & jelly & navi & samba --> zfs
+    apps --> nvme
+    pve -->|"scheduled backups"| pbs
+    mgmt -->|"checks + webhook"| discord
 ```
 
----
+### What runs where
 
-## Inside Docker VM (services)
-
-| Component        | Purpose |
-|------------------|---------|
-| Traefik          | reverse proxy + routing + TLS termination |
-| Sonarr / Radarr  | media indexing / automation |
-| Deluge           | non-public torrent client |
-| Jellyfin         | media server |
-| JellySeer        | media request platform |
-| Komga            | comic / manga server |
-| Calibre          | EBook server |
-| Mealie           | recipe management + meal planning |
-| Paperless        | document indexing and management |
-| Nextcloud        | cloud sync + family photo backup |
-| Portainer        | Docker visibility and mgmt |
-| Homepage         | internal portal for apps |
-
-All containers run as **dedicated non-root Unix users** matching their service identity.  
-Their mounts are precise: each user only can read/write what that service actually needs.
+| Container | Role |
+|---|---|
+| DNS | Pi-hole with its own recursive resolver (Unbound), so ads are blocked and I don't depend on someone else's DNS |
+| Reverse proxy | Clean names and a real wildcard certificate for every service |
+| VPN | Tailscale subnet router that gets me back into the house |
+| File sharing | Samba, managed through Cockpit, so every device sees the media as a network drive |
+| Docker (management) | Authentik, Vaultwarden, Uptime Kuma and other admin apps |
+| Docker (media automation) | Seerr, Radarr, Sonarr, Bazarr and friends |
+| Docker (music) | Soulseek and music tooling |
+| Jellyfin / Navidrome | Video and music servers |
+| Tunnel | Cloudflare connector for the few services I share with family and friends |
 
 ---
 
-## Outside Docker VM
+## Design decisions
 
-| Component       | Purpose |
-|-----------------|---------|
-| Alpine Linux box | Tailscale VPN ingress + Uptime Kuma |
-| Raspberry Pi     | dnsmasq + unbound (recursive DNS) |
-
----
-
-## Security Model
-
-- only **80/443** publicly exposed
-- TLS termination and routing at Traefik (Docker VM)
-- all admin access only over **Tailscale**
-- services least privilege: UID/GID per container
-- storage separated (NFS), not mount sprawl inside containers
-- security plane = physically separate from app workloads
+- **LXC over VMs.** Containers share the host kernel, start in seconds and cost almost no RAM. Ten of them use less than 15% of the machine. I harden what I can (unprivileged where possible) and accept the remaining privileged ones as a conscious trade-off.
+- **ZFS owns the disks.** A mirror survives a dead drive, checksums catch silent corruption, and a monthly scrub repairs it. All media lives in one dataset so downloads can be *hardlinked* into the library instead of copied.
+- **One identity.** Management apps sit behind Authentik, so MFA lives in one place and there is one off-switch.
+- **Don't expose what you don't need.** Nothing listens on my home connection. Sensitive tools are LAN/VPN only, and only what other people really need is published through the tunnel.
+- **Back up what is irreplaceable.** The whole lab is backed up at the Proxmox level, but I only back up *data* I can't get back (photos, home videos, configs). Media can be re-downloaded or re-ripped.
+- **Boring monitoring.** No heavy stack. Uptime Kuma checks the services, a script checks the host, and heartbeats check that the monitoring itself is still alive.
 
 ---
 
-## Why this design?
+## Security model
 
-Because this models real production principles:
+| Layer | Approach |
+|---|---|
+| **Ingress** | Cloudflare Tunnel (outbound connection), no inbound port forwarding |
+| **Admin access** | Only from the LAN or over VPN (Tailscale / Teleport) |
+| **Identity** | SSO + MFA through Authentik, passwords in self-hosted Vaultwarden |
+| **Isolation** | One container per role, unprivileged where possible, same UID/GID only for services that share media |
+| **Storage** | Bind-mount only the paths a service needs |
+| **Recovery** | PBS backups, ZFS mirror and scrubs, SMART tests, all verified on a schedule |
 
-- separation of privilege domains
-- separation of control plane vs app plane
-- rollback and snapshot ability (at Proxmox boundary)
-- real threat model, not “toy homelab”
+### Threat model
 
----
-
-## Threat Model
-
-| Threat | Vector | Impact | Mitigation |
-|---|---|---|---|
-| Unauthorized remote access | Internet-exposed ports | Full compromise | Only 80/443 exposed publicly, TLS at Traefik, admin only via Tailscale |
-| Credential theft | browser / client compromise | Lateral move to internal apps | No password reuse, MFA where supported |
-| Container breakout | 0-day in app container | VM compromise | VM boundary, limited container privileges, isolated mounts |
-| Supply chain compromise | malicious image | persistent backdoor | trusted registries, reproducible images where possible |
-| Privilege escalation | exploit in host components | hypervisor access | Proxmox not accessible public, admin plane separate physical box |
-| Data exfiltration | ransomware / reverse shells | loss of confidentiality | minimal privileges, offline backups, split trust domains |
-| DoS | flood 80/443 | outage | rate limiting on ingress |
-
----
-
-## Roadmap
-
-- deploy Vaultwarden (self-hosted Bitwarden)
-- deploy Authentik as centralized identity provider (SSO, RBAC)
-- deploy Mealie for recipe & meal mgmt
-- implement VLAN segmentation (IoT vs Mgmt vs Media)
-- OpenTelemetry pipeline (metrics, logs, traces)
-- secret lifecycle automation (short lived credentials)
+| Threat | Vector | Mitigation |
+|---|---|---|
+| Unauthorized remote access | Exposed services | No forwarded ports, tunnel only for shared apps behind accounts, admin over VPN |
+| Credential theft | Phished or reused password | Vaultwarden, unique passwords, MFA at the Authentik layer |
+| Container breakout | Vulnerability in an app | Per-role containers, unprivileged where possible, scoped mounts |
+| Vulnerable public app | Unpatched service behind the tunnel | Cloudflare proxy in front, prompt updates, share as little as possible |
+| Data loss | Disk failure, bad update, ransomware, fire | ZFS mirror, scheduled PBS backups with verification; off-site copy is next |
+| Silent failure | Alerts or monitoring stop working | Heartbeats that notify me when the monitoring itself goes quiet |
 
 ---
 
-## Summary
+## What's next
 
-This is a homelab intentionally treated as a real distributed system — not a toy — because this is where I experiment with the same reliability, security, isolation and identity principles used in modern backend + platform engineering.
+- Off-site copy of the irreplaceable data, to complete the 3-2-1 rule
+- Nightly instead of weekly backups
+- Immich for photos (once the backups are sorted), Paperless-ngx, Mealie and Komga
+- Karakeep or Linkwarden for saved links
+- VLAN segmentation (IoT, management, media)
+- OpenTelemetry pipeline for metrics, logs and traces
