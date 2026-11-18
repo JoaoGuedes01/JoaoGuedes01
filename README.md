@@ -48,6 +48,11 @@ Outside of work I run a small homelab on Proxmox with LXC containers and a ZFS m
 ## Latest from the blog
 
 <!-- BLOG-POST-LIST:START -->
+- [Keeping It Alive](https://joaoguedes.net/blog/keeping-it-alive/) <sub>Nov 13, 2026</sub>
+- [The Infrastructure](https://joaoguedes.net/blog/the-infrastructure/) <sub>Nov 12, 2026</sub>
+- [The Media Stack](https://joaoguedes.net/blog/the-media-stack/) <sub>Nov 10, 2026</sub>
+- [The Rebuild](https://joaoguedes.net/blog/the-rebuild/) <sub>Nov 9, 2026</sub>
+- [The Frankenlab](https://joaoguedes.net/blog/the-frankenlab/) <sub>Nov 7, 2026</sub>
 <!-- BLOG-POST-LIST:END -->
 
 ---
