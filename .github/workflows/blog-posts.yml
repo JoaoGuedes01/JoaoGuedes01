@@ -12,9 +12,33 @@ jobs:
   update-readme:
     runs-on: ubuntu-latest
     steps:
-      - uses: gautamkrishnar/blog-post-workflow@v1
-        with:
-          feed_list: 'https://joaoguedes.net/rss.xml'
-          max_post_count: 5
-          template: '- [$title]($url) <sub>$date</sub>'
-          date_format: 'mmm d, yyyy'
+      - uses: actions/checkout@v4
+
+      - name: Insert the latest posts into the README
+        run: |
+          python3 - <<'PY'
+          import re, urllib.request, xml.etree.ElementTree as ET
+          from email.utils import parsedate_to_datetime
+
+          FEED, COUNT = 'https://joaoguedes.net/rss.xml', 5
+
+          # Cloudflare rejects Python's default user agent, so send our own.
+          request = urllib.request.Request(FEED, headers={'User-Agent': 'readme-blog-updater'})
+          items = ET.parse(urllib.request.urlopen(request, timeout=20)).getroot().iter('item')
+          lines = []
+          for item in list(items)[:COUNT]:
+              date = parsedate_to_datetime(item.findtext('pubDate')).strftime('%b %-d, %Y')
+              lines.append(f"- [{item.findtext('title')}]({item.findtext('link')}) <sub>{date}</sub>")
+
+          readme = open('README.md').read()
+          block = '<!-- BLOG-POST-LIST:START -->\n' + '\n'.join(lines) + '\n<!-- BLOG-POST-LIST:END -->'
+          readme = re.sub(r'<!-- BLOG-POST-LIST:START -->.*?<!-- BLOG-POST-LIST:END -->', block, readme, flags=re.S)
+          open('README.md', 'w').write(readme)
+          PY
+
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add README.md
+          git diff --cached --quiet || (git commit -m "Update latest blog posts" && git push)
