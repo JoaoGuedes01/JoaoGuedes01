@@ -13,7 +13,7 @@
 
 ---
 
-## 👋 About me
+## About me
 
 Backend Engineer @ [Uphold](https://uphold.com/), based in Portugal. I design and build distributed backend systems with an emphasis on resilience, observability and maintainability, and my security background lets me look at software the way an attacker would.
 
